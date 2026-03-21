@@ -27,7 +27,14 @@ class CurlClient : public ouster::sdk::sensor::HttpClient {
 
    public:
     explicit CurlClient(const std::string& base_url) : HttpClient(base_url) {
-        curl_global_init(CURL_GLOBAL_ALL);
+        // Initialize curl globally exactly once per process lifetime.
+        // Calling curl_global_init/cleanup per-instance is unsafe when other
+        // libraries (e.g. FastDDS) use OpenSSL concurrently: cleanup would
+        // call OPENSSL_cleanup() while those libraries are still active.
+        static struct CurlGlobalGuard {
+            CurlGlobalGuard() { curl_global_init(CURL_GLOBAL_ALL); }
+            ~CurlGlobalGuard() { curl_global_cleanup(); }
+        } curl_global_guard;
         // NOLINTNEXTLINE(cppcoreguidelines-prefer-member-initializer)
         curl_handle_ = curl_easy_init();
         curl_easy_setopt(curl_handle_, CURLOPT_WRITEFUNCTION,
@@ -50,7 +57,7 @@ class CurlClient : public ouster::sdk::sensor::HttpClient {
     // Destructor
     ~CurlClient() override {
         curl_easy_cleanup(curl_handle_);
-        curl_global_cleanup();
+        // curl_global_cleanup() is now handled by CurlGlobalGuard above.
     }
 
     std::string get(const std::string& url,

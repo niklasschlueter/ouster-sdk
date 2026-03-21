@@ -1,6 +1,6 @@
 #include "ouster/impl/logging.h"
 
-#include <spdlog/fmt/bundled/args.h>
+#include <fmt/args.h>
 #include <spdlog/sinks/basic_file_sink.h>
 #include <spdlog/sinks/ringbuffer_sink.h>
 #include <spdlog/sinks/rotating_file_sink.h>
