@@ -4,6 +4,14 @@ find_package(Threads REQUIRED)
 find_package(nmea REQUIRED)
 find_package(libzip REQUIRED)
 find_package(OpenSSL REQUIRED)
+# Use the conda/env spdlog + fmt (single shared copy in the process) instead of
+# the vendored header-only spdlog under thirdparty/. The vendored copy compiles a
+# second spdlog into this static lib whose symbols are interposed at runtime by
+# conda's libspdlog.so (pulled in by ROS 2's rcl_logging_spdlog) -> ABI mismatch
+# -> segfault on the first SDK log call during sensor init. CONFIG mode bypasses
+# the vendored cmake/Findspdlog.cmake so we get conda's spdlog::spdlog.
+find_package(spdlog CONFIG REQUIRED)
+find_package(fmt CONFIG REQUIRED)
 
 include(Coverage)
 
@@ -47,6 +55,10 @@ target_link_libraries(ouster_client
     nmea
     libzip::zip
     ${OPENSSL_LIBRARIES}
+    # conda spdlog+fmt: brings SPDLOG_FMT_EXTERNAL headers + the shared libspdlog,
+    # so logging.cpp uses the one spdlog already in the process (no duplicate).
+    spdlog::spdlog
+    fmt::fmt
     )
 target_compile_definitions(ouster_client PRIVATE EIGEN_MPL2_ONLY)
 if(BUILD_SHARED_LIBRARY)
@@ -70,7 +82,8 @@ target_include_directories(ouster_client
       $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   PRIVATE
       ${OPENSSL_INCLUDE_DIR}
-      $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../thirdparty/spdlog>
+      # NOTE: the vendored ../thirdparty/spdlog include was removed on purpose --
+      # logging.cpp now uses conda's spdlog (linked via spdlog::spdlog above).
 )
 
 target_include_directories(ouster_client SYSTEM

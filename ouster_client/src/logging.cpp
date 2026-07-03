@@ -1,13 +1,17 @@
 #include "ouster/impl/logging.h"
 
-// Use spdlog's bundled fmt (v10), not the external <fmt/args.h>: mixing the
-// two puts both in the same inline namespace and fails to compile whenever the
-// system/env fmt version differs from the bundled one (e.g. fmt 12).
-#include <spdlog/fmt/bundled/args.h>
+// Use the conda/env fmt (external), matching the conda spdlog this TU links
+// against (spdlog::spdlog, built SPDLOG_FMT_EXTERNAL). The dynamic_format_arg_store
+// + vformat API below lives in <fmt/args.h>. Do NOT use spdlog's bundled fmt: that
+// compiles a SECOND spdlog (header-only) into this static lib whose symbols get
+// interposed at runtime by conda's libspdlog.so -> ABI mismatch -> segfault on the
+// first log call during sensor init. See ouster_client/CMakeLists.txt.
+#include <fmt/args.h>
 #include <spdlog/sinks/basic_file_sink.h>
 #include <spdlog/sinks/ringbuffer_sink.h>
 #include <spdlog/sinks/rotating_file_sink.h>
 #include <spdlog/sinks/stdout_sinks.h>
+#include <spdlog/pattern_formatter.h>  // conda spdlog doesn't pull this in via spdlog.h
 #include <spdlog/spdlog.h>
 
 #include <iostream>
