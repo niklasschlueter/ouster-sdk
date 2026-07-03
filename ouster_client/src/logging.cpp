@@ -1,6 +1,9 @@
 #include "ouster/impl/logging.h"
 
-#include <fmt/args.h>
+// Use spdlog's bundled fmt (v10), not the external <fmt/args.h>: mixing the
+// two puts both in the same inline namespace and fails to compile whenever the
+// system/env fmt version differs from the bundled one (e.g. fmt 12).
+#include <spdlog/fmt/bundled/args.h>
 #include <spdlog/sinks/basic_file_sink.h>
 #include <spdlog/sinks/ringbuffer_sink.h>
 #include <spdlog/sinks/rotating_file_sink.h>
